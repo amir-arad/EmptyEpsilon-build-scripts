@@ -1,19 +1,23 @@
 #!/bin/bash
 EE_BUILD_HOME=`pwd`
-EE_BUILD_EE_PATH="${EE_BUILD_HOME}/EmptyEpsilon"
-EE_BUILD_SP_PATH="${EE_BUILD_HOME}/SeriousProton"
+EE_BUILD_EE_PATH="/EmptyEpsilon"
+EE_BUILD_SP_PATH="/SeriousProton"
 EE_BUILD_SFML_VERSION="2.5"
 EE_BUILD_SFML_PATH="${EE_BUILD_HOME}/SFML-${EE_BUILD_SFML_VERSION}"
 EE_BUILD_DRMINGW_VERSION="0.8" # Unused; we build from master.
 EE_BUILD_DRMINGW_PATH="${EE_BUILD_HOME}/drmingw"
-EE_BUILD_ZIP_PATH="${EE_BUILD_HOME}/EE_ZIP"
+EE_BUILD_ZIP_PATH="/release"
 EE_BUILD_MINGW_LIBPATH="$(dirname $(locate libgcc.a | grep win32 | grep i686) 2> /dev/null)"
 EE_BUILD_MINGW_USRPATH="$(dirname $(locate libwinpthread-1.dll | grep i686) 2> /dev/null)"
 EE_BUILD_DATE="$(date +'%Y%m%d')"
 EE_BUILD_CMAKE="${EE_BUILD_EE_PATH}/cmake"
+CORES="$(grep -c ^processor /proc/cpuinfo)"
 
+echo "Update system..."
 #make sure the system is updated. 
-sudo apt-get update && sudo apt-get -y upgrade
+sudo apt-get update
+sudo apt-get -y upgrade
+echo "System Updated"
 
 #fix build error for the drmingw toolchain
 sudo ln -sfn /usr/bin/python3.6 /usr/bin/python
@@ -23,7 +27,7 @@ sudo ln -sfn /usr/bin/python3.6 /usr/bin/python
 # Update system and install tools.
 if [ ! -d "${EE_BUILD_MINGW_LIBPATH}" ]; then
   echo "Installing tools..."
-  sudo apt update && sudo apt -y install wget cmake build-essential git python-minimal libgl1-mesa-dev libxrandr-dev libfreetype6-dev libglew-dev libjpeg-dev libopenal-dev libxcb1-dev libxcb-image0-dev libudev-dev libflac-dev libvorbis-dev unzip zip mingw-w64
+  sudo apt -y install wget cmake build-essential git python-minimal libgl1-mesa-dev libxrandr-dev libfreetype6-dev libglew-dev libjpeg-dev libopenal-dev libxcb1-dev libxcb-image0-dev libudev-dev libflac-dev libvorbis-dev unzip zip mingw-w64
   ## Find a better way to get the mingw path!
   sudo updatedb
   EE_BUILD_MINGW_LIBPATH="$(dirname $(locate libgcc.a | grep win32 | grep i686))"
@@ -34,28 +38,7 @@ fi
 # Clone repos.
 echo "Cloning or updating git repos..."
 
-## Get SeriousProton and EmptyEpsilon.
-if [ ! -d "${EE_BUILD_SP_PATH}" ]; then
-  echo "-   Cloning SeriousProton repo to ${EE_BUILD_SP_PATH}..."
-  git clone https://github.com/daid/SeriousProton.git "${EE_BUILD_SP_PATH}"
-else
-  echo "-   Fetching and merging SeriousProton repo at ${EE_BUILD_SP_PATH}..."
-  ( cd "${EE_BUILD_SP_PATH}";
-    git fetch --all && git merge --ff-only; )
-fi
-echo
-
-if [ ! -d "${EE_BUILD_EE_PATH}" ]; then
-  echo "-   Cloning EmptyEpsilon repo to ${EE_BUILD_EE_PATH}..."
-  git clone https://github.com/daid/EmptyEpsilon.git "${EE_BUILD_EE_PATH}"
-else
-  echo "-   Fetching and merging EmptyEpsilon repo at ${EE_BUILD_EE_PATH}..."
-  ( cd "${EE_BUILD_EE_PATH}";
-    git fetch --all && git merge --ff-only; )
-fi
-echo
-
-## Get SFML 2.3.x.
+## Get SFML 
 if [ ! -d "${EE_BUILD_SFML_PATH}" ]; then
   echo "-   Cloning SFML repo to ${EE_BUILD_SFML_PATH}..."
   git clone https://github.com/SFML/SFML.git -b "${EE_BUILD_SFML_VERSION}.x" "${EE_BUILD_SFML_PATH}"
@@ -99,7 +82,7 @@ if [ ! -d lin32 ]; then
   mkdir lin32
 fi
 cd lin32
-cmake .. && make && sudo make install
+cmake .. && make -j$CORES && sudo make install
 echo
 
 ## Build SFML for Windows.
@@ -111,7 +94,7 @@ fi
 cd win32
 ### Use the CMake toolchain from EE to make it easier to compile for Windows.
 cmake -DCMAKE_TOOLCHAIN_FILE="${EE_BUILD_CMAKE}/mingw.toolchain" -DOPENAL_LIBRARY="${EE_BUILD_SFML_PATH}/extlibs/bin/x86/openal32.dll" ..
-make
+make -j$CORES
 echo
 
 ## Build DrMingW Windows debugging DLLs.
@@ -136,25 +119,25 @@ echo
 
 ## Build EmptyEpsilon for Linux.
 echo "Building EmptyEpsilon for Linux..."
-cd "${EE_BUILD_EE_PATH}"
+cd "${EE_BUILD_HOME}"
 if [ ! -d lin32 ]; then
   mkdir lin32
 fi
 cd lin32
-cmake -DSERIOUS_PROTON_DIR="${EE_BUILD_SP_PATH}/" -DSFML_ROOT="${EE_BUILD_SFML_PATH}/" ..
-make
+cmake -DSERIOUS_PROTON_DIR="${EE_BUILD_SP_PATH}/" -DSFML_ROOT="${EE_BUILD_SFML_PATH}/" "${EE_BUILD_EE_PATH}"
+make -j$CORES
 echo
 
 ## Build EmptyEpsilon for Windows.
 echo "Building EmptyEpsilon for Windows..."
-cd "${EE_BUILD_EE_PATH}"
+cd "${EE_BUILD_HOME}"
 if [ ! -d win32 ]; then
   mkdir win32
 fi
 cd win32
 ### Find a better way to get the mingw path!
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS:STRING=-DSFML_STATIC -DCMAKE_TOOLCHAIN_FILE="${EE_BUILD_CMAKE}/mingw.toolchain" -DSERIOUS_PROTON_DIR="${EE_BUILD_SP_PATH}/" -DSFML_ROOT="${EE_BUILD_SFML_PATH}/win32" -DMING_DLL_PATH="${EE_BUILD_MINGW_LIBPATH}/" -DDRMINGW_ROOT="${EE_BUILD_DRMINGW_PATH}/win32" -DENABLE_CRASH_LOGGER=1 ..
-make
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS:STRING=-DSFML_STATIC -DCMAKE_TOOLCHAIN_FILE="${EE_BUILD_CMAKE}/mingw.toolchain" -DSERIOUS_PROTON_DIR="${EE_BUILD_SP_PATH}/" -DSFML_ROOT="${EE_BUILD_SFML_PATH}/win32" -DMING_DLL_PATH="${EE_BUILD_MINGW_LIBPATH}/" -DDRMINGW_ROOT="${EE_BUILD_DRMINGW_PATH}/win32" -DENABLE_CRASH_LOGGER=1 "${EE_BUILD_EE_PATH}"
+make -j$CORES
 echo
 
 # Build a distributable archive.
@@ -180,7 +163,7 @@ cp -rv "${EE_BUILD_EE_PATH}/packs" "${EE_BUILD_EE_PATH}/scripts" "${EE_BUILD_EE_
 echo
 
 echo "Copying binaries..."
-cp -v "${EE_BUILD_EE_PATH}/win32/EmptyEpsilon.exe" "${EE_BUILD_EE_PATH}/lin32/EmptyEpsilon" "${EE_BUILD_ZIP_PATH}/EmptyEpsilon"
+cp -v "${EE_BUILD_HOME}/win32/EmptyEpsilon.exe" "${EE_BUILD_HOME}/lin32/EmptyEpsilon" "${EE_BUILD_ZIP_PATH}/EmptyEpsilon"
 echo
 
 echo "Copying support files..."
@@ -209,7 +192,7 @@ echo "Compressing build..."
 cd "${EE_BUILD_ZIP_PATH}"
 EE_BUILD_COMMIT="$(head ${EE_BUILD_EE_PATH}/commit.log | cut -d ' ' -f 1)"
 EE_BUILD_ZIP_FILE="${EE_BUILD_ZIP_PATH}/EmptyEpsilon_${EE_BUILD_DATE}_${EE_BUILD_COMMIT}.zip"
-zip -r "${EE_BUILD_ZIP_FILE}" ./EmptyEpsilon
+zip -r -9 "${EE_BUILD_ZIP_FILE}" ./EmptyEpsilon
 echo
 
 # Wrap up and note the end of the build.

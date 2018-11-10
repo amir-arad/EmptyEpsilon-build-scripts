@@ -7,14 +7,20 @@
 ### for EmptyEpsilon https://github.com/daid/EmptyEpsilon
 ### By Kwadroke "of The Wired" https://github.com/kwadroke
 
+ee_path = ENV['EMPTY_EPSILON']
+sp_path = ENV['SERIOUS_PROTON']
+
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/bionic64"
   config.ssh.forward_x11 = true
-  config.ssh.private_key_path = "~/.ssh/private_key"
+  config.ssh.insert_key = false
   config.vm.provider "virtualbox" do |vb|
     vb.cpus = 4
     vb.memory = 4096
   end
+  config.vm.synced_folder ee_path, "/EmptyEpsilon", id: "ee"
+  config.vm.synced_folder sp_path, "/SeriousProton", id: "sp"
+  config.vm.synced_folder "../release", "/release", id: "r"
   config.vm.provision :shell, path: "build_ee_u1804.sh", run: 'always'
   config.vm.hostname = "bridgesim-ee"
 end
