@@ -31,9 +31,16 @@ and simply run
 $ vagrant up --provision
 ```
 
-## cleanup
 when you're done building, make sute to run 
 ```
 $ vagrant halt
 ```
 to stop the virtual machine, as it is not secured.
+
+## cleanup
+
+the virtual machine is stateful. so be sure to run 
+```
+$ vagrant destroy
+```
+when done building
