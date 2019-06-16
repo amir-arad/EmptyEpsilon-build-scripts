@@ -2,7 +2,7 @@
 
 scripts to build EE releases
 ## setup
-install latest vagrant 
+install latest [vagrant](https://www.vagrantup.com/) 
 ```
 $ vagrant version
 Installed Version: 2.2.0
