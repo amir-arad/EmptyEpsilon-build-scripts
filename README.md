@@ -14,7 +14,7 @@ install .env file plugin
 ```
 vagrant plugin install vagrant-env
 ```
-maybe also need to install virtualbox.
+maybe also need to install [virtualbox](https://www.virtualbox.org).
 
 ## execute
 set environment variables `EMPTY_EPSILON` and `SERIOUS_PROTON` with absolute paths to git clones of respected libbraries and run vagrant from the 
