@@ -32,6 +32,8 @@ and simply run
 $ vagrant up --provision
 ```
 
+In my experience, not all builds work the first time, but sometimes a second run works. so if the result .zip file does not contain an `.exe` file, I suggest running `$ vagrant up --provision` again.
+
 when you're done building, make sute to run 
 ```
 $ vagrant halt
@@ -40,8 +42,8 @@ to stop the virtual machine, as it is not secured.
 
 ## cleanup
 
-the virtual machine is stateful. so be sure to run 
+the virtual machine is saved in the local hard drive. so run 
 ```
 $ vagrant destroy
 ```
-when done building
+when you want to free up space
